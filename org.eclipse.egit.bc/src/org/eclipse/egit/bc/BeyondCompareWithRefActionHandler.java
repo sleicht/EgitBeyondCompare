@@ -31,7 +31,8 @@ import org.eclipse.ui.PlatformUI;
  * file as found in the working directory and the version in the selected ref.
  */
 public class BeyondCompareWithRefActionHandler extends BeyondCompareRepositoryActionHandler {
-	
+
+	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
 		final Repository repo = getRepository(true, event);
 		// assert all resources map to the same repository
@@ -46,7 +47,7 @@ public class BeyondCompareWithRefActionHandler extends BeyondCompareRepositoryAc
 
 			if (resources.length == 1 && resources[0] instanceof IFile) {
 				final IFile baseFile = (IFile) resources[0];
-				
+
 				try {
 					RepositoryMapping mapping = RepositoryMapping.getMapping(resources[0]);
 					String repoRelativeBasePath = mapping.getRepoRelativePath(baseFile);
@@ -54,19 +55,20 @@ public class BeyondCompareWithRefActionHandler extends BeyondCompareRepositoryAc
 					ObjectId commitId = repo.resolve(refName);
 
 					Repository localRepo = mapping.getRepository();
-					RevWalk rw = new RevWalk(localRepo);
-					RevCommit commit = rw.parseCommit(commitId);
-					rw.release();
+					try(RevWalk rw = new RevWalk(localRepo)){
+						RevCommit commit = rw.parseCommit(commitId);
+						rw.dispose();
 
-					String rightFilePath = BeyondCompareUtil.getCompareFilePath(repoRelativeBasePath, commit, localRepo);
-					String leftFilePath = baseFile.getLocation().toFile().getAbsolutePath();
-					BeyondCompareUtil.execBeyondCompare(leftFilePath, rightFilePath);
+						String rightFilePath = BeyondCompareUtil.getCompareFilePath(repoRelativeBasePath, commit, localRepo);
+						String leftFilePath = baseFile.getLocation().toFile().getAbsolutePath();
+						BeyondCompareUtil.execBeyondCompare(leftFilePath, rightFilePath);
+					}
 
 				} catch (IOException e) {
 					Activator.handleError(UIText.CompareWithIndexActionHandler_onError, e, true);
 					return null;
 				}
-				
+
 			} else {
 				CompareTreeView view;
 				try {

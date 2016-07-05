@@ -34,12 +34,13 @@ import org.eclipse.ui.PlatformUI;
  */
 public class BeyondCompareWithCommitActionHandler extends BeyondCompareRepositoryActionHandler {
 
+	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
 		final Repository repo = getRepository(true, event);
 		IResource[] resources = getSelectedResources(event);
 		if (repo == null)
 			return null;
-		
+
 		CommitSelectionDialog dlg = new CommitSelectionDialog(getShell(event), repo);
 		if (dlg.open() != Window.OK)
 			return null;
@@ -53,14 +54,14 @@ public class BeyondCompareWithCommitActionHandler extends BeyondCompareRepositor
 				ObjectId commitId = dlg.getCommitId();
 
 				Repository localRepo = mapping.getRepository();
-				RevWalk rw = new RevWalk(localRepo);
-				RevCommit commit = rw.parseCommit(commitId);
-				rw.release();
+				try(RevWalk rw = new RevWalk(localRepo)){
+					RevCommit commit = rw.parseCommit(commitId);
+					rw.dispose();
 
-				String rightFilePath = BeyondCompareUtil.getCompareFilePath(repoRelativeBasePath, commit, localRepo);
-				String leftFilePath = baseFile.getLocation().toFile().getAbsolutePath();
-				BeyondCompareUtil.execBeyondCompare(leftFilePath, rightFilePath);
-
+					String rightFilePath = BeyondCompareUtil.getCompareFilePath(repoRelativeBasePath, commit, localRepo);
+					String leftFilePath = baseFile.getLocation().toFile().getAbsolutePath();
+					BeyondCompareUtil.execBeyondCompare(leftFilePath, rightFilePath);
+				}
 			} catch (IOException e) {
 				Activator.handleError(UIText.CompareWithIndexAction_errorOnAddToIndex, e, true);
 				return null;

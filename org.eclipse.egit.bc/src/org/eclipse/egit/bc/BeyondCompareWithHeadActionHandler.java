@@ -39,6 +39,7 @@ import org.eclipse.ui.handlers.HandlerUtil;
  */
 public class BeyondCompareWithHeadActionHandler extends BeyondCompareRepositoryActionHandler {
 
+	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
 		final Repository repository = getRepository(true, event);
 		// assert all resources map to the same repository
@@ -68,7 +69,7 @@ public class BeyondCompareWithHeadActionHandler extends BeyondCompareRepositoryA
 			try {
 				view = (CompareTreeView) PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().showView(CompareTreeView.ID);
 				try {
-					Ref head = repository.getRef(Constants.HEAD);
+					Ref head = repository.exactRef(Constants.HEAD);
 					if (head == null || head.getObjectId() == null) {
 						// Initial commit case
 						Shell shell = HandlerUtil.getActiveShell(event);
@@ -95,14 +96,14 @@ public class BeyondCompareWithHeadActionHandler extends BeyondCompareRepositoryA
 	}
 
 	private static RevCommit getHeadRevision(Repository repository, String repoRelativePath) throws MissingObjectException, IncorrectObjectTypeException, IOException {
-		Ref head = repository.getRef(Constants.HEAD);
+		Ref head = repository.exactRef(Constants.HEAD);
 		if (head == null || head.getObjectId() == null)
 			// Initial import, not yet a HEAD commit
 			return null;
 
 		RevCommit latestFileCommit;
-		RevWalk rw = new RevWalk(repository);
-		try {
+
+		try(RevWalk rw = new RevWalk(repository)) {
 			RevCommit headCommit = rw.parseCommit(head.getObjectId());
 			rw.markStart(headCommit);
 			rw.setTreeFilter(AndTreeFilter.create(
@@ -112,12 +113,9 @@ public class BeyondCompareWithHeadActionHandler extends BeyondCompareRepositoryA
 			// Fall back to HEAD
 			if (latestFileCommit == null)
 				latestFileCommit = headCommit;
-		} finally {
-			rw.release();
+			rw.dispose();
 		}
 
 		return latestFileCommit;
-
 	}
-
 }

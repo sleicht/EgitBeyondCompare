@@ -25,7 +25,6 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.jobs.ISchedulingRule;
 import org.eclipse.egit.core.internal.job.JobUtil;
 import org.eclipse.egit.core.op.IEGitOperation;
-import org.eclipse.egit.ui.internal.UIText;
 import org.eclipse.egit.ui.internal.dialogs.CommitSelectDialog;
 import org.eclipse.egit.ui.internal.dialogs.CompareTreeView;
 import org.eclipse.jface.dialogs.MessageDialog;
@@ -57,6 +56,7 @@ public class BeyondCompareWithPreviousActionHandler extends BeyondCompareReposit
 			this.resource = resource;
 		}
 
+		@Override
 		public void execute(IProgressMonitor monitor) throws CoreException {
 			final List<PreviousCommit> previousList;
 			try {
@@ -74,19 +74,20 @@ public class BeyondCompareWithPreviousActionHandler extends BeyondCompareReposit
 				for (PreviousCommit pc: previousList)
 					commits.add(pc.commit);
 				HandlerUtil.getActiveShell(event).getDisplay()
-						.syncExec(new Runnable() {
-							public void run() {
-								CommitSelectDialog dlg = new CommitSelectDialog(
-										HandlerUtil.getActiveShell(event),
-										commits);
-								if (dlg.open() == Window.OK)
-									for (PreviousCommit pc: previousList)
-										if (pc.commit.equals(dlg.getSelectedCommit())){
-											   previous.set(pc);
-											   break;
-										   }
-							}
-						});
+				.syncExec(new Runnable() {
+					@Override
+					public void run() {
+						CommitSelectDialog dlg = new CommitSelectDialog(
+								HandlerUtil.getActiveShell(event),
+								commits);
+						if (dlg.open() == Window.OK)
+							for (PreviousCommit pc: previousList)
+								if (pc.commit.equals(dlg.getSelectedCommit())){
+									previous.set(pc);
+									break;
+								}
+					}
+				});
 			}
 			else
 				previous.set(previousList.get(0));
@@ -107,6 +108,7 @@ public class BeyondCompareWithPreviousActionHandler extends BeyondCompareReposit
 			final Shell shell = HandlerUtil.getActiveShell(event);
 			shell.getDisplay().asyncExec(new Runnable() {
 
+				@Override
 				public void run() {
 					try {
 						CompareTreeView view = (CompareTreeView) PlatformUI
@@ -124,20 +126,22 @@ public class BeyondCompareWithPreviousActionHandler extends BeyondCompareReposit
 		private void showNotFoundDialog() {
 			final Shell shell = HandlerUtil.getActiveShell(event);
 			final String message = MessageFormat
-					.format(UIText.CompareWithPreviousActionHandler_MessageRevisionNotFound,
+					.format(org.eclipse.egit.ui.internal.UIText.CompareWithPreviousActionHandler_MessageRevisionNotFound,
 							resource.getName());
 			shell.getDisplay().asyncExec(new Runnable() {
 
+				@Override
 				public void run() {
 					MessageDialog
-							.openWarning(
-									shell,
-									UIText.CompareWithPreviousActionHandler_TitleRevisionNotFound,
-									message);
+					.openWarning(
+							shell,
+							org.eclipse.egit.ui.internal.UIText.CompareWithPreviousActionHandler_TitleRevisionNotFound,
+							message);
 				}
 			});
 		}
 
+		@Override
 		public ISchedulingRule getSchedulingRule() {
 			return resource;
 		}
@@ -146,6 +150,7 @@ public class BeyondCompareWithPreviousActionHandler extends BeyondCompareReposit
 	/**
 	 * @see org.eclipse.core.commands.IHandler#execute(org.eclipse.core.commands.ExecutionEvent)
 	 */
+	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
 		Repository repository = getRepository(true, event);
 		if (repository == null)

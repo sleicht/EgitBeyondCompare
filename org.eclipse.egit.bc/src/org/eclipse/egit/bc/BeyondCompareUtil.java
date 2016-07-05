@@ -13,7 +13,7 @@ import org.eclipse.core.resources.IStorage;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
-import org.eclipse.core.runtime.SubProgressMonitor;
+import org.eclipse.core.runtime.SubMonitor;
 import org.eclipse.egit.bc.preferences.BeyondCompareEgitPreferencePage;
 import org.eclipse.egit.core.internal.CompareCoreUtils;
 import org.eclipse.egit.ui.internal.CompareUtils;
@@ -38,7 +38,7 @@ public class BeyondCompareUtil {
 		String beyondCompareCommand = BeyondCompareEgitPreferencePage.getBeyondCompareExecutablePath();
 		if ( beyondCompareCommand == null )
 			return;
-		
+
 		exec(beyondCompareCommand, leftFile, rightFile, "/rightreadonly"); //$NON-NLS-1$
 	}
 
@@ -70,12 +70,10 @@ public class BeyondCompareUtil {
 	 * @throws IOException
 	 * @throws CoreException
 	 */
-	public static String storeVersionTempFile(InputStream content, String name, RevCommit version, String encoding, File tempDir, boolean addVersionSuffix, IProgressMonitor monitor) throws IOException ,CoreException {
+	public static String storeVersionTempFile(InputStream content, String name, RevCommit version, String encoding, File tempDir, boolean addVersionSuffix, IProgressMonitor monitor0) throws IOException ,CoreException {
 		String taskName = "Retrieving Git revision for " + name + "..."; //$NON-NLS-1$ //$NON-NLS-2$
-		if (monitor == null) {
-			monitor = new NullProgressMonitor();
-		}
-		monitor.beginTask(taskName, 100);
+		SubMonitor progress = SubMonitor.convert(monitor0);
+		progress.beginTask(taskName, 100);
 
 		String ext = ""; //$NON-NLS-1$
 		int dot = name.lastIndexOf("."); //$NON-NLS-1$
@@ -96,16 +94,16 @@ public class BeyondCompareUtil {
 		}
 		File tempFile = new File(tempDir, name + ext);
 		//System.out.println("remote SVN file v" + version.getVersion() + ": " + tempFile.getAbsolutePath());
-		monitor.worked(10);
+		progress.worked(10);
 		// write out the file if it doesn't exist or if the revision is newer than the cached file
 		Date versionDate = new Date();
-		if (readAndWriteStringByDate(content, encoding, tempFile, versionDate, new SubProgressMonitor(monitor, 90))) {
+		if (readAndWriteStringByDate(content, encoding, tempFile, versionDate, progress.split(90))) {
 			// successfully saved
 		} else {
 			// remote file revision date is older than the cached file's last modified date
-			monitor.worked(90);
+			progress.worked(90);
 		}
-		monitor.done();
+		progress.done();
 		return tempFile.getAbsolutePath();
 	}
 
@@ -147,12 +145,12 @@ public class BeyondCompareUtil {
 				// File's last modified date is older than the given date, so
 				// overwrite
 				readAndWriteString(is, encoding, outputFile, monitor, true /* overwrite */);
-//				System.out.println("Remote file is newer than the cached version, updating."); //$NON-NLS-1$
+				//				System.out.println("Remote file is newer than the cached version, updating."); //$NON-NLS-1$
 				wrote = true;
 			} else {
 				// remote file revision date is older than the cached file's
 				// last modified date
-//				System.out.println("Remote file already exists."); //$NON-NLS-1$
+				//				System.out.println("Remote file already exists."); //$NON-NLS-1$
 			}
 		}
 		return wrote;
@@ -195,7 +193,7 @@ public class BeyondCompareUtil {
 	 */
 	public static void readAndWriteString(InputStream is, String encoding,
 			File outputFile, IProgressMonitor monitor, boolean overwrite)
-			throws IOException {
+					throws IOException {
 		if (is == null) {
 			return;
 		}
@@ -220,7 +218,7 @@ public class BeyondCompareUtil {
 					monitor.worked(read);
 				}
 			} else {
-//				System.out.println("Output file already exists (" + outputFile.getCanonicalPath() + ")"); //$NON-NLS-1$ //$NON-NLS-2$
+				//				System.out.println("Output file already exists (" + outputFile.getCanonicalPath() + ")"); //$NON-NLS-1$ //$NON-NLS-2$
 			}
 		} finally {
 			monitor.done();
