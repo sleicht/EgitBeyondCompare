@@ -36,6 +36,7 @@ import org.eclipse.core.runtime.PlatformObject;
 import org.eclipse.egit.core.AdapterUtils;
 import org.eclipse.egit.core.project.RepositoryMapping;
 import org.eclipse.egit.ui.internal.UIText;
+import org.eclipse.egit.ui.internal.actions.RepositoryAction;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.text.TextSelection;
 import org.eclipse.jface.viewers.ISelection;
@@ -166,16 +167,16 @@ public abstract class BeyondCompareRepositoryActionHandler extends AbstractHandl
 				if (o instanceof Repository)
 					nextRepo = (Repository) o;
 				else if (o instanceof PlatformObject)
-					nextRepo = (Repository) ((PlatformObject) o)
-							.getAdapter(Repository.class);
+					nextRepo = ((PlatformObject) o)
+					.getAdapter(Repository.class);
 				if (nextRepo != null && result != null
 						&& !result.equals(nextRepo)) {
 					if (warn)
 						MessageDialog
-								.openError(
-										shell,
-										UIText.RepositoryAction_multiRepoSelectionTitle,
-										UIText.RepositoryAction_multiRepoSelection);
+						.openError(
+								shell,
+								UIText.RepositoryAction_multiRepoSelectionTitle,
+								UIText.RepositoryAction_multiRepoSelection);
 					return null;
 				}
 				result = nextRepo;
@@ -245,7 +246,7 @@ public abstract class BeyondCompareRepositoryActionHandler extends AbstractHandl
 			selection = ctx.getVariable(ISources.ACTIVE_MENU_SELECTION_NAME);
 			if (!(selection instanceof ISelection))
 				selection = ctx
-						.getVariable(ISources.ACTIVE_CURRENT_SELECTION_NAME);
+				.getVariable(ISources.ACTIVE_CURRENT_SELECTION_NAME);
 		} else if (aSelection != null)
 			selection = aSelection;
 		else
@@ -263,6 +264,7 @@ public abstract class BeyondCompareRepositoryActionHandler extends AbstractHandl
 		return StructuredSelection.EMPTY;
 	}
 
+	@Override
 	public void setEnabled(Object evaluationContext) {
 		this.evaluationContext = (IEvaluationContext) evaluationContext;
 	}
@@ -274,7 +276,7 @@ public abstract class BeyondCompareRepositoryActionHandler extends AbstractHandl
 		// no active window during Eclipse shutdown
 		if (activeWorkbenchWindow == null)
 			return null;
-		IHandlerService hsr = (IHandlerService) activeWorkbenchWindow
+		IHandlerService hsr = activeWorkbenchWindow
 				.getService(IHandlerService.class);
 		ctx = hsr.getCurrentState();
 		return ctx;
@@ -379,7 +381,7 @@ public abstract class BeyondCompareRepositoryActionHandler extends AbstractHandl
 
 		for (DiffEntry diff : entries)
 			if (diff.getChangeType() == ChangeType.MODIFY
-					&& path.equals(diff.getNewPath()))
+			&& path.equals(diff.getNewPath()))
 				return path;
 
 		RenameDetector detector = new RenameDetector(repository);
@@ -388,7 +390,7 @@ public abstract class BeyondCompareRepositoryActionHandler extends AbstractHandl
 				NullProgressMonitor.INSTANCE);
 		for (DiffEntry diff : renames)
 			if (diff.getChangeType() == ChangeType.RENAME
-					&& path.equals(diff.getNewPath()))
+			&& path.equals(diff.getNewPath()))
 				return diff.getOldPath();
 
 		return path;
@@ -400,8 +402,7 @@ public abstract class BeyondCompareRepositoryActionHandler extends AbstractHandl
 		IResource resource = getSelectedResources()[0];
 		String path = RepositoryMapping.getMapping(resource.getProject())
 				.getRepoRelativePath(resource);
-		RevWalk rw = new RevWalk(repository);
-		try {
+		try(RevWalk rw = new RevWalk(repository)) {
 			if (path.length() > 0) {
 				DiffConfig diffConfig = repository.getConfig().get(
 						DiffConfig.KEY);
@@ -409,7 +410,7 @@ public abstract class BeyondCompareRepositoryActionHandler extends AbstractHandl
 				rw.setTreeFilter(filter);
 			}
 
-			RevCommit headCommit = rw.parseCommit(repository.getRef(
+			RevCommit headCommit = rw.parseCommit(repository.exactRef(
 					Constants.HEAD).getObjectId());
 			rw.markStart(headCommit);
 			headCommit = rw.next();
@@ -429,7 +430,6 @@ public abstract class BeyondCompareRepositoryActionHandler extends AbstractHandl
 				}
 				previousCommit = rw.next();
 			}
-		} finally {
 			rw.dispose();
 		}
 		return result;
